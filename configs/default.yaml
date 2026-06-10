@@ -1,0 +1,22 @@
+array:
+  type: uca
+  num_sensors: 8
+  radius_m: 0.14
+
+signal:
+  center_frequency_hz: 2407000000.0
+  bandwidth_hz: 100000000.0
+
+estimator:
+  azimuth_grid_deg:
+    start: 0.0
+    stop: 360.0
+    step: 1.0
+  elevation_grid_deg:
+    start: -30.0
+    stop: 31.0
+    step: 1.0
+  n_sources: 1
+  support_threshold: 0.5
+  min_support_bins: 64
+  min_snapshots_per_freq: 8

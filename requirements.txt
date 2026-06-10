@@ -1,0 +1,4 @@
+numpy>=1.24
+h5py>=3.10
+matplotlib>=3.7
+PyYAML>=6.0

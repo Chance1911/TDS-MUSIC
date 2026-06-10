@@ -1,0 +1,238 @@
+# TF512 simulation with controlled interference.
+
+seed: 0
+out_dir: ./sim_out_interference_tf512
+clip_prefix: clip
+
+array:
+  type: UCA
+  M: 8
+  radius_m: 0.14
+  center_freq_hz: 2407000000.0
+  steering:
+    mode: per_bin
+
+stft:
+  T: 512
+  F: 512
+  f_min_hz: 0.0
+  f_max_hz: 100000000.0
+  observation_duration_ms: 50.0
+
+scene:
+  doa:
+    az_range_deg: [0, 360]
+    el_range_deg: [0, 90]
+    motion:
+      enable: false
+      az_rate_deg_per_s: 0.0
+      el_rate_deg_per_s: 0.0
+  num_sources: 1
+
+uav_proxy:
+  type_probs:
+    U1_VWIDE_FAST: 0.2
+    U2_VWIDE_MID: 0.2
+    U5_VBURST_FAST: 0.2
+    U7_VNARROW_MID: 0.2
+    U8_VDRIFT_MID: 0.2
+  proxy_types:
+    - name: U1_VWIDE_FAST
+      components:
+        - kind: ofdm
+          weight: 1.0
+          bw_choices_hz: [10000000.0]
+          duty: [0.8]
+          burst_period_ms: [6, 10]
+          burst_on_ratio: [0.6, 0.85]
+          center_offset_ratio: [-0.05, 0.05]
+    - name: U2_VWIDE_MID
+      components:
+        - kind: ofdm
+          weight: 1.0
+          bw_choices_hz: [20000000.0]
+          duty: [0.55]
+          burst_period_ms: [18, 30]
+          burst_on_ratio: [0.4, 0.65]
+          center_offset_ratio: [-0.12, 0.12]
+    - name: U5_VBURST_FAST
+      components:
+        - kind: ofdm
+          weight: 1.0
+          bw_choices_hz: [10000000.0]
+          duty: [0.45]
+          burst_period_ms: [4, 8]
+          burst_on_ratio: [0.35, 0.65]
+          center_offset_ratio: [-0.25, 0.25]
+    - name: U7_VNARROW_MID
+      components:
+        - kind: ofdm
+          weight: 1.0
+          bw_choices_hz: [10000000.0]
+          duty: [0.9]
+          burst_period_ms: [50, 120]
+          burst_on_ratio: [0.85, 1.0]
+          center_offset_ratio: [-0.35, 0.35]
+    - name: U8_VDRIFT_MID
+      components:
+        - kind: ofdm
+          weight: 1.0
+          bw_choices_hz: [10000000.0]
+          duty: [0.65]
+          burst_period_ms: [8, 14]
+          burst_on_ratio: [0.7, 0.95]
+          center_offset_ratio: [-0.45, 0.45]
+
+uav_auxiliary:
+  fhss_global:
+    enable: false
+    presence_prob: 0.65
+    weight: [0.1, 0.25]
+    hopset_bw_hz: [60000000.0, 90000000.0]
+    tone_bw_hz: [1500000.0, 3000000.0]
+    dwell_ms: [2, 4]
+    hop_interval_ms: [5, 8]
+    hop_step_hz: [1000000.0, 5000000.0]
+    duty: [0.75, 1.0]
+    center_offset_ratio: [-0.2, 0.2]
+
+interference_noise:
+  enable_interference: true
+  enable_noise: true
+
+  # Can be scalar or list/range. Dataset sweep can also be controlled by dataset_plan.
+  snr_db: 0
+  sir_db: -10
+
+  # Total SIR:
+  #   10log10(mean(|target_array_signal|^2) / mean(|sum_all_interference_array_signal|^2))
+  sir_definition: target_power_over_total_interference_power
+
+  # Choose which types are allowed to participate.
+  # You can also override on command line:
+  #   --enabled_interference_types wideband_block,fh_jammer
+  enabled_interference_types:
+    - cw
+    - wideband_block
+    - fullband_impulse
+    - fh_jammer
+    - chirp_sweep
+
+  tf_overlap:
+    # none | binary | target_energy
+    # target_energy means:
+    #   sum(P_target(t,f) * M_interference(t,f)) / sum(P_target(t,f))
+    mode: target_energy
+
+    # Example: 0%-5%. Change to [0.05, 0.10] for 5%-10%.
+    range: [0.05, 0.10]
+
+    # Candidate search. Increase if low-overlap ranges are hard to satisfy.
+    max_candidates: 256
+    accept_tolerance: 0.005
+    target_mask_threshold: 1.0e-8
+
+  mixture_policy:
+    always_use_all_enabled_types: true
+    min_components: 1
+    max_components: 3
+    allow_repeated_types: true
+
+  spatial_policy:
+    near_target_prob: 0.30
+    near_target_delta_az_deg: [10, 25]
+    near_target_delta_el_deg: [3, 12]
+    random_az_range_deg: [0, 360]
+    random_el_range_deg: [0, 90]
+
+  interference:
+    components:
+      - type: cw
+        enable: true
+        num_tones: [1, 3]
+        tone_width_bins: [1, 2]
+        time_duty: [0.80, 1.00]
+        tone_drift_bins: [0, 2]
+
+      - type: wideband_block
+        enable: true
+        num_blocks: [1, 2]
+        bandwidth_hz: [5000000.0, 30000000.0]
+        duration_frames: [32, 512]
+
+      - type: fullband_impulse
+        enable: true
+        num_impulses_per_clip: [1, 8]
+        len_frames: [1, 8]
+        full_band_ratio: [0.70, 1.00]
+      - type: fh_jammer
+        enable: true
+        num_hops: [3, 12]
+        tone_bw_hz: [800000.0, 4000000.0]
+        dwell_frames: [2, 16]
+        hop_gap_frames: [0, 8]
+        hopset_bw_hz: [20000000.0, 90000000.0]
+
+      - type: chirp_sweep
+        enable: true
+        num_sweeps: [1, 2]
+        duration_frames: [32, 256]
+        sweep_bw_hz: [5000000.0, 50000000.0]
+        tone_bw_hz: [800000.0, 4000000.0]
+
+errors:
+  per_clip_random:
+    gain_std_db: 1.0
+    phase_std_deg: 10.0
+  global_bias:
+    az_bias_deg: 0.0
+    el_bias_deg: 0.0
+
+physics:
+  multipath:
+    enable: false
+    num_paths: [0, 0]
+    rel_powers_db: [-12, -3]
+    delays_ns: [10, 120]
+    doa_perturb_deg:
+      az: [-5, 5]
+      el: [-3, 3]
+
+dataset_plan:
+#  base_N: 10  ### former target overlap base_N
+#  base_N: 20  # fixed SIR=-5 binary overlap base_N
+  base_N: 10
+
+  # If you want scans, uncomment these:
+  # snr_scan:
+  #   start_db: -20
+  #   stop_db: 20
+  #   step_db: 5
+  # sir_scan:
+  #   start_db: -10
+  #   stop_db: 10
+  #   step_db: 5
+
+  overlap_ranges:
+   - [0.00, 0.2]
+   - [0.2, 0.40]
+   - [0.40, 0.60]
+   - [ 0.6, 0.80 ]
+   - [ 0.80, 1.00 ]
+
+#  splits: ### former target overlap base_N
+#    train: {multiplier: 6}
+#    val: {multiplier: 2}
+#    test: {multiplier: 2}
+
+  splits: ###  fixed SIR=-5 binary overlap base_N
+    train: { multiplier: 4 }
+    val: { multiplier: 2 }
+    test: { multiplier: 4 }
+  proxy_names: []
+
+output:
+  format: h5
+  write_X_stft_alias: false
+  write_quicklook_scm_tf: false
+  write_clean_parts: false
