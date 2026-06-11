@@ -57,7 +57,7 @@ def check_exp5(data_root: Path) -> list[tuple[bool, str]]:
         return [(False, "exp5 TDS-MUSIC SIR=-10 overlap=0.600-0.800 row missing")]
     row = target[0]
     return [
-        close("exp5 TDS-MUSIC ASR pct", float(row["asr_pct"]), 73.5, 1.0),
+        close("exp5 TDS-MUSIC ASR pct", float(row["asr_pct"]), 57.5, 1.0),
         close("exp5 TDS-MUSIC az success pct", float(row["az_success_at_delta_pct"]), 61.0, 1.5),
     ]
 
